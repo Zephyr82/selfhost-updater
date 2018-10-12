@@ -204,7 +204,7 @@ fi
 
 # Konfiguration: Schauen, ob eine IPv4 oder eine IPv6 Adresse aktualisiert werden soll
 if [ -e "$IPVERSIONFILE" ] ; then
-  $IPVERSION = `cat $IPVERSIONFILE`
+  IPVERSION = `cat $IPVERSIONFILE`
 fi
 
 # Konfiguration: Usernamen setzen
@@ -353,9 +353,9 @@ if [ "$DOUPDATE" = "1" ] ; then
     else
       echo -n "Suche IP-Adresse fuer $DEVICE... "
       # TODO Die ermittlung der IP-Adresse so umstellen, dass das Script das Ermitteln einer v6-Adresse zulässt. Im Idealfall erfolgt dies anhand eines Parameters
-      if [ $IPVERSION = "IPv6" ] ; then
+      if [ "$IPVERSION" = "IPv6" ] ; then
         IPADDR=`ip addr show $DEVICE | grep -e "scope global.*dynamic" | grep -Po 'inet6 \K[0-9a-fA-F:]+' | grep -v fd`
-      elif [ $IPVERSION = "IPv4" ] ; then
+      elif [ "$IPVERSION" = "IPv4" ] ; then
         IPADDR=`/sbin/ifconfig $DEVICE | grep inet | awk '{ print $2 }' | awk -F : '{ print $2 }'`
       fi
     fi
