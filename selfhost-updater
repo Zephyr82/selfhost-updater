@@ -204,7 +204,7 @@ fi
 
 # Konfiguration: Schauen, ob eine IPv4 oder eine IPv6 Adresse aktualisiert werden soll
 if [ -e "$IPVERSIONFILE" ] ; then
-  IPVERSION = `cat $IPVERSIONFILE`
+  IPVERSION=`cat $IPVERSIONFILE`
 fi
 
 # Konfiguration: Usernamen setzen
