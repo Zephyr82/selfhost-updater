@@ -1,0 +1,295 @@
+---------------------------------------
+ README für den selfhost.de-IP-Updater
+---------------------------------------
+
+* Wird die neueste Version eingesetzt? -> 20140404
+
+* Bei Fragen hilft die Mailingliste:
+
+  Abonnieren: Einfach eine leere E-Mail senden an:
+    selfhost-subscribe@jonaspasche.de
+
+  Abbestellen: Einfach eine leere E-Mail senden an:
+    selfhost-unsubscribe@jonaspasche.de
+
+  In beiden Fällen kommt erst noch eine Rückfragemail, nach deren Beantwortung
+  man die Liste abonniert oder abbestellt hat.
+
+  An die Liste schreiben:
+    selfhost@jonaspasche.de
+
+  Die E-Mail wird umgehend verteilt (keine Moderation); auch der Absender
+  erhält seine eigene E-Mail selbst, da er ja auch Listenempfänger ist.
+
+  Bitte keine Anfragen zu "Wie mache ich das mit der crontab" - das hat nichts
+  mit dem selfhost-updater zu tun, sondern mit der zugrundeliegenden Linux-
+  Distribution, deren Dokumentation ausführlich die Funktion von crontabs
+  erklären sollte.
+
+* Ein Wort zum Support...
+
+  Obwohl die Entwicklung des selfhost-updater für Linux von selfhost.de
+  als Auftragsarbeit initiiert wurde, handelt es sich nicht um ein offizielles
+  Produkt von selfhost.de (genausowenig wie beispielsweise die Windows-Clients
+  im Download-Bereich). Insofern wird Support für den selfhost-updater auch
+  _nicht_ von selfhost.de selbst geleistet, sondern von mir (dem Entwickler)
+  und den vielen anderen Benutzern dieses Tools.
+
+  Der selfhost-updater wird unter einer freien Lizenz (GPL) zur Verfügung
+  gestellt; eine Haftung ist somit in jedem Fall ausgeschlossen. Gleichzeitig
+  bedeutet das auch, dass er z.B. für eigene Zwecke angepasst werden kann.
+  Die Weitergabe von angepassten Versionen ist jedoch nur gestattet, wenn diese
+  selbst wieder der GPL unterliegen.
+
+  Wie bei freier Software üblich, wird der Support per Mailingliste geleistet.
+  Das hat viele Vorzüge: Zum einen kann jeder zur Problemlösung beitragen,
+  auch wenn ich, der Entwickler, persönlich einmal nicht verfügbar sein sollte.
+  Zum anderen profitieren alle Mailinglisten-Teilnehmer auch durchs Mitlesen
+  schon von den Fragen und Antworten anderer. So sind auch schon einige Ideen
+  und Anregungen entstanden, die in den selfhost-updater eingeflossen sind.
+  Last but not least geht es auch ein bißchen um's Geben und Nehmen: Wer heute
+  vielleicht noch Hilfe in Anspruch nehmen muss, kann morgen vielleich schon
+  anderen mal ein bißchen weiterhelfen.
+
+  Also: Bestehen Fragen oder Schwierigkeiten, so stehen die Teilnehmer der
+  Mailingliste gerne zur Verfügung. Ich lese und schreibe natürlich auch auf
+  der Mailingliste mit. Außerdem veröffentliche ich dort Meldungen über Updates;
+  das sollte doch schon Grund genug sein. :-)
+
+  Und für alle, die ein bisschen Angst vor vielen E-Mails haben: Keine Sorge, die
+  Liste ist nicht sehr hochvolumig. Außerdem werden E-Mail-Adressen natürlich
+  keinesfalls weitergegeben oder für andere Zwecke genutzt; Ehrensache.
+
+* Das Script liegt unter folgender URL zum Download bereit:
+
+  http://jonaspasche.de/selfhost-updater
+
+  In einem Verzeichnis speichern, das im PATH liegt, z.B. /usr/local/sbin;
+  anschließend Ausführungsrechte vergeben.
+
+  Beispiel für eine Installation, hier exemplarisch mit wget:
+
+  su -                                          # um root zu werden
+  cd /usr/local/sbin                            # hier soll das Script hin
+  wget http://jonaspasche.de/selfhost-updater   # Script herunterladen
+  chmod 700 selfhost-updater                    # ausführbar machen
+
+  Auf Systemen, auf denen wget nicht zur Verfuegung steht (z.B. MacOS X),
+  kann auch cURL verwendet werden:
+
+  curl -O http://jonaspasche.de/selfhost-updater
+
+* Erstkonfiguration:
+
+  (Die spitzen Klammern sollen deutlich machen, dass es sich hier um Variablen
+  handelt und dürfen nicht mit eingegeben werden!)
+
+  Der DynDNS-Username und das DynDNS-Passwort sind *nicht* die Kundendaten bei 
+  selfhost, also *nicht* die Daten, mit der man sich auf der selfhost-Website 
+  einloggt. Die erforderlichen Daten können in den Details des DynDNS-Accounts 
+  eingesehen werden. Hintergrund ist, dass es durchaus mehrere DynDNS-Accounts
+  unter einer selfhost-Kundennummer geben kann, und die müssen sich dann 
+  natürlich anhand ihrer Zugangsdaten auch unterscheiden.
+
+  selfhost-updater setusr <dyndns-username>
+  selfhost-updater setpwd <dyndns-passwort>
+  selfhost-updater setdev <gerätename>
+
+  <gerätename> entspricht dabei dem Gerät, über das die Internet-Verbindung
+  läuft, also in der Regel ppp0 oder ippp0. Bei Zugang über einen Router oder
+  wenn das Gerät nicht bekannt ist, ``router'' als Gerät angeben; hierbei
+  wird die IP-Adresse dann mit Hilfe eines externen IP-Checkers ermittelt.
+
+* Erster Test:
+
+  selfhost-updater update
+
+  Das Update sollte erfolgreich sein. Wenn nicht, Mailingliste fragen, und
+  dabei bitte den vollständigen Output des Programms mitschicken (copy+paste)
+
+* Wenn "router" als Gerät gesetzt ist, aber beim ersten Aufruf die Ermittlung
+  der IP-Adresse fehlschlägt...
+
+  Ein wenig zum Hintergrund: Im Modus "router" benutzt der selfhost-updater
+  eine externe URL, um seine eigene IP-Adresse zu erfahren. Dabei stehen
+  mehrere wechselnde URLs zur Verfügung, die von selfhost.de nach einem Update
+  übermittelt werden. Im Script voreingestellt ist eine Default-URL, die man
+  benutzen kann, wenn die "richtige" Liste der IP-Check-URLs noch nicht ver-
+  fügbar ist - also nur beim allerersten Aufruf des Scripts. Sollte die URL
+  des IP-Checkers just bei diesem ersten Aufruf allerdings einmal offline sein,
+  so ist das natürlich problematisch.
+
+  Abhilfe:
+
+  Einfach ein Update durchführen, bei dem die IP-Adresse manuell angegeben wird,
+  z.B. "selfhost-updater update 1.2.3.4". Damit wird die automatische Übermitt-
+  lung übergangen, sprich, man braucht keinen IP-Checker. Mit der Bestätigung
+  des Updates erhält man dann die _aktuellen_ URLs der IP-Checker, die derzeit
+  verfügbar sind und kann dann also unmittelbar danach ein normales Update mit
+  "selfhost-updater update" durchführen. Die automatische Ermittlung der IP
+  sollte dabei dann funktionieren.
+
+* "...es trat ein temporärer Fehler auf", oder allgemein:
+* SSL wird vom verwendeten Tool nicht unterstützt:
+
+  Der selfhost-updater arbeitet seit der Version 20020106 von Haus aus mit
+  SSL. Wenn das verwendete Tool (z.B. lynx) jedoch kein SSL unterstützt,
+  kann jedoch das Update-CGI-Script nicht aufgerufen werden. Da der
+  selfhost-updater in diesem Fall keine Rückmeldung bekommt, geht er von
+  einem temporären Fehler aus. Wer diese Meldung also dauerhaft erhält,
+  sollte einmal versuchen, den SSL-Support auszuschalten, in dem er die
+  Umgebungsvariable NOSSL setzt:
+
+  NOSSL=1 selfhost-updater update
+
+  In diesem Fall wird wie bisher die unverschlüsselte URL benutzt.
+
+* lynx unterstützt den SSL-Modus nicht korrekt, obwohl es SSL kann
+
+  Tests haben gezeigt, dass einige lynx-Versionen eine Prüfung des Zertifikats
+  durchführen. Im interaktiven Modus von lynx wird dann nachgefragt, ob das
+  Zertifikat akzeptiert werden soll; im Shell-Modus wird eine fehlgeschlagene
+  Prüfung ohne aussagekräftige Fehlermeldung als Fehler dargestellt.
+
+  Um lynx allgemein die Prüfung von Zertifikaten abzugewöhnen (funktioniert
+  einfach, ist aber nicht empfohlen, wenn Sie lynx noch zu anderen Zwecken
+  benutzen), tragen Sie in /etc/lynx-site.cfg ein:
+
+  FORCE_SSL_PROMPT:NO
+
+  Alternativ können Sie das benutzt Root-Zertifikat von GeoTrust in Ihren
+  lokalen Zertifikatsspeicher installieren. Laden Sie es sich von dieser URL
+  herunter:
+
+  https://www.geotrust.com/resources/root_certificates/certificates/Equifax_Secure_Global_eBusiness_CA-1.cer
+
+  Um es in den Zertifikatsspeicher zu kopieren, fügen sie einfach den Inhalt
+  dieser Datei an den bestehenden Zertifikatsspeicher an. Unter Fedora Linux
+  findet er sich beispielsweise in /usr/share/ssl/cert.pem. Bei anderen Distri-
+  butionen kann er auch woanders liegen.
+
+  Hinweis: Die meisten aktuellen _grafischen_ Browser unterstützen das
+  Root-Zertifikat von GeoTrust direkt, allerdings ist es nicht bei allen
+  Distributionen auf im von lynx genutzten Zertifikatsspeicher vorhanden,
+  wodurch obiges Problem auftritt.
+
+* Bestimmten Web-Client benutzen
+
+  Der selfhost-updater ermittelt automatisch, ob wget, lynx oder links vorhanden
+  sind (in dieser Reihenfolge). Wer einen bestimmten Web-Client verwenden will,
+  kann dessen Namen in /etc/selfhost/tool hinterlegen, z.B. "lynx" - hier wird
+  dann die automatische Ermittlung übergangen und lynx benutzt, auch wenn wget
+  auf dem System installiert ist.
+
+* Wenn alles klappt: Einen Cron-Job einrichten, der das Tool periodisch aufruft.
+
+  Beispiel für den Eintrag in einer crontab ("crontab -e" als root):
+  */10 * * * * /usr/local/sbin/selfhost-updater update | logger -t selfhost
+
+  Damit wird alle 10 Minuten die IP-Adresse geprüft und ggf. aktualisiert.
+  Die Ausgabe des Scripts wird dabei über den Befehl "logger" zum syslog-
+  Daemon geschickt und findet sich z.B. in der Datei /var/log/messages wieder
+  oder allgemein dort, wohin syslog Meldungen der Klasse user.notice schreibt.
+
+  Die genaue Beschreibung der Handhabung von Crob-Jobs würde diese README spren-
+  gen; Dokumentation dazu sollte sich aber zum einen im Handbuch der verwendeten
+  Linux-Distribution und zum anderen auf der manpage ("man crontab") finden.
+
+* Benachrichtigungsmeldungen vom selfhost-updater
+
+  Wer gerne nicht nur ein Logfile haben möchte, sondern automatisch eine
+  E-Mail bekommen will, wenn ein erfolgreiches Update lief oder ein Update
+  fehlschlug, kann die gewünschte E-Mail-Adresse in /etc/selfhost/notify
+  setzen und wird dann automatisch benachrichtigt. Dafür muss das Programm
+  "mail" auf dem Linux-Rechner installiert sein, und ein Mailserver die
+  Mail auch nach draußen schicken können.
+
+  Wichtig: Hier bitte möglichst _NICHT_ eine Adresse auf dem DynDNS-Host
+  angeben. Nach einem Update braucht's noch einen Augenblick, bis die neue
+  IP online ist, und vor allem Fehlermeldungen über Fehler beim Updaten
+  von meinhost.selfhost.de lassen sich nicht wirklich gut an die Adresse
+  info@meinhost.selfhost.de zustellen (es sei denn, der Mailserver läuft
+  auf dem gleichen Rechner).
+
+* Update auf bestimmte IP-Adresse (ohne automatische Ermittlung):
+
+  Unter bestimmten Umständen kann es praktisch sein, manuell die IP-Adresse
+  festzulegen, die beim Update verwendet werden soll. Die automatische
+  Ermittlung wird in diesem Fall übergangen. Und so geht's:
+
+  selfhost-updater update <ip-adresse>
+
+* Update erzwingen:
+
+  Das Script speichert seine aktuelle IP in /etc/selfhost/ip - wenn die
+  aktuell gefundene mit der dort gespeicherten übereinstimmt, wird kein
+  Update veranlaßt. Wer eins erzwingen will, braucht nur diese Datei zu
+  löschen und erneut ein Update zu starten.
+
+  Achtung, selfhost.de läßt aus Sicherheitsgründen nur eine begrenzte
+  Anzahl von Updates in einem Zeitraum zu. Es kann also sein, dass ein
+  Host für einige Minuten gesperrt wird, wenn er zuviele Updates an
+  selfhost.de sendet. Bei krassen Fällen (hunderte von Updates...) kann
+  auch eine Sperrung bis zum nächsten Tag erfolgen. Diese kann jedoch
+  auch vorzeitig im Web-Konfigurationsmenü von selfhost.de entsperrt
+  werden. In eigenem Interesse sollte man aber zuerst schauen, was die
+  Ursache für derart viele Updates war.
+
+* Server offline schalten:
+
+  selfhost-updater offline
+
+  Damit wird der dynamische DNS-Eintrag auf die IP-Adresse von selfhost
+  geschaltet, wo eine Offline-Meldung hinterlegt ist. Macht sich z.B. gut
+  in if-down.local, um den DNS-Eintrag offline zu schalten, wenn der Server
+  heruntergefahren wird.
+
+* Mehrere Accounts verwenden:
+
+  Die Konfiguration wird standardmäßig in /etc/selfhost gespeichert. Dies
+  kann jedoch über die Umgebungsvariable CONFIGDIR geändert werden. Der
+  Aufruf sieht dann wie folgt aus:
+
+  CONFIGDIR=/etc/mydir selfhost-updater update
+
+  Entsprechend muß dann auch die Konfiguration für dieses Verzeichnis mit
+  der Angabe von CONFIGDIR erfolgen, zum Beispiel:
+
+  CONFIGDIR=/etc/mydir selfhost-updater setdev router
+
+  CONFIGDIR kann hierbei z.B. auch im eigenen home-Verzeichnis liegen, so
+  dass der selfhost-updater auch ohne root-Rechte aufgerufen werden kann!
+
+* Wenn sich der selfhost-updater selbst gesperrt hat:
+
+  Wenn selfhost bei einem Update einen Statuscode der Klasse 4xx zurück-
+  liefert, deutet dies auf einen Konfigurationsfehler hin (z.B. Zugangsdaten
+  ungültig, Domain ist keine DynDNS-Domain, Domain ist noch nicht verfügbar,
+  Mahnverfahren), der in jedem Fall eine Analyse und konkrete Fehlerbehebung
+  erfordert. Der selfhost-Support und die Mailingliste können hier unterstützen.
+  Der selfhost-updater sperrt sich dabei vorerst selbst, um nicht ein fehlerhaftes
+  Update nach dem anderen zu selfhost zu schicken.
+
+  Der selfhost-updater entsperrt sich selbst automatisch nach 24 Stunden. Soll
+  die Sperre früher aufgehoben werden, einfach /etc/selfhost/locked löschen.
+
+  WICHTIG: Alle Fehler der Klasse 4xx (400-499) deuten IMMER auf einen Konfi-
+  gurationsfehler hin. Solche Fehler lösen sich (im Gegensatz zu Fehlern der
+  Klasse 5xx, die nur temporär sind), NIE von alleine.
+
+* Debugging
+
+  Bei Problemen bitte einen Aufruf von "selfhost-updater update" mit DEBUG=1
+  durchführen:
+
+  DEBUG=1 selfhost-updater update
+
+  Hierbei wird sowohl der verwendete Web-Client als auch die aufgerufene URL
+  (Passwort ausgeblendet) als auch die vollständige Rückmeldung des Tools aus-
+  gegeben. Bei Problemberichten an die Mailingliste bitte immer diese Ausgabe
+  per Copy+Paste mitschicken!
+
+* Autor: Jonas Pasche <mail AT jonaspasche.de>
+
+  Bitte keine Fragen und Problemberichte an mich direkt senden; dafür steht
+  die Mailingliste zur Verfügung.
