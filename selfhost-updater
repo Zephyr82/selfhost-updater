@@ -1,0 +1,474 @@
+#!/bin/bash
+
+# IP-Updater fuer selfhost.de
+VERSION=20140404
+
+# Autor: Jonas Pasche <mail AT jonaspasche.de>
+# Lizenz: GPL
+#
+# Aenderungen:
+# 20140404 Pruefungen der IP-Adresse lassen nun auch IPv6-IPs zu, seit die selfHOST-API jene erlaubt
+# 20070313 Offline-IP wird nun nicht mehr lokal ermittelt
+# 20060206 Versionsnummer in Debug-Ausgabe eingefuegt
+#          wget: Falls eine entsprechende Option bei "wget --help" erkannt wurde, wird die Ueberpruefung
+#            des SSL-Zertifikats ausgeschaltet
+#          Einbindung der Web-Client-Bezeichnung in den User-Agent 
+# 20060126 Timeout von 5 Sekunden fuer wget eingefuehrt
+# 20060125 Support fuer curl als Web-Client; damit besteht ab sofort auch Support fuer MacOS X
+# 20050925 Auswahllogik lynx/links/wget korrigiert; links kam bisher nie zum Zug
+#            (Danke an Florian Siegesmund <fds AT siegesmund-edv.de>)
+# 20050313 Umleitung der Ausgaben angepasst; lynx wird nun korrekt mit "-source" statt "--source"
+#            aufgerufen
+# 20050312 Konvertierung frueherer Einstellungen herausgenommen
+#          Pruefung auf root-Rechte entfernt; der selfhost-updater kann nun komplett ohne root-Rechte
+#            laufen
+#          OFFLINEFILE wird nun nicht mehr genutzt; laut aktueller API von selfhost soll nun immer
+#            die IP von rewrite.selfhost.de als Offline-IP genutzt werden; wird dynamisch ermittelt
+#          Auswertung der Statusmeldungen von selfhost (getvar statt getmeta), hierbei Unterscheidung
+#            zwischen Clientfehlern (hat 24-Stunden-Sperrung zur Folge) und Serverfehlern (temporaer)
+#          Default-IP-Checker ist nun http://remote.ns4you.de/
+#          wget als Default-Web-Client eingestellt, da mit lynx/links zuviele Inkompatibilitaeten
+#            zwischen den verschiedenen Versionen auftraten (Danke an b52 AT entrap.org)
+#          Updatepruefung rausgenommen; ueber Updates wird auf der Mailingliste informiert, und im
+#            Logfile liest die Meldung sowieso niemand. Ausserdem gibt selfhost die aktuelle Version
+#            auch nicht mehr aus
+#          Liste der URL-Checker wird nun nur noch gespeichert, wenn es auch welche gibt
+#          links wird nun korrekt mit "-source" statt "--source" aufgerufen
+#          Nun korrekter Abbruch, wenn IP-Checker keine IP lieferte; einmalige Benachrichtigung,
+#            wenn ein IP-Checker nicht funktioniert (Danke an Kai Klimke <kai.klimke AT web.de>)
+#          Script wird mit "#!/bin/bash" statt "#!/bin/sh" eingeleitet, da einige Distributionen eine
+#            andere Default-Shell nach /bin/sh verlinkt haben
+# 20041114 Die 24h-Selbstsperrung wurde nicht immer korrekt durchgefuehrt, wenn ein Fehler auftrat;
+#            das ist nun behoben
+#          Die Angabe von DEBUG=1 gibt nach Aufruf des Update-Backends die komplette Rueckgabe aus
+#          Unterstuetzung der statischen Angabe eines Backends in $TOOLFILE
+#          Neue Offline-IP 62.75.227.200 als Default eingestellt
+# 20030827 Bei Fehlermeldung "temporaerer Fehler" nun auch Hinweis auf NOSSL=1
+#          "selfhost-updater version" gibt die eigene Versionsnummer aus
+#          Rueckmeldungen der Klasse "error" sorgen nun fueue eine komplette Sperrung der Updatefunktion,
+#            da sie einen manuellen Eingriff erfordern
+#          Benachrichtigungsmechanismus per E-Mail
+# 20030622 In der Updater-URL "cgi-dns" in "cgi-bin" geaendert, da "cgi-dns" kuenftig wegfallen koennte
+# 20030601 Neue Default-URL fuer IP-Checker: remote.ns4you.de/cgi-bin/router.cgi
+#          Neue Funktion, um die eigene IP-Adresse auszulesen
+#          Nicht alle elinks-Versionen verstehen "-user-agent"; Ueberpruefung
+# 20030310 Default-IP-Adresse fuer die Offline-URL aktualisiert; die alte war nicht mehr aktuell
+# 20030310 Alle ifconfig-Calls mit vollstaendigem Pfad ergaenzt, hatte noch welche uebersehen :(
+# 20030128 Aufruf von route mit vollstaendigem Pfad ergaenzt, um Fehler auf Systemen zu vermeiden,
+#            die unter Cron einen unvollstaendigen PATH gesetzt haben (ohne /sbin)
+#          Nach erfolgreichem IP Update erfolgt eine Pruefung, ob eine neue Version vorliegt
+#          User-Agent wg. Problemen mit Leerzeichen geaendert auf "selfhost-updater-linux-<version>"
+#          Bessere Fehlermeldung, wenn dns.pl-Script weder Fehler noch Erfolg zurueckliefert
+# 20030127 Wenn zu einem Account eine Domaingruppe gehoert, wird nun die ganze Gruppe ausgegeben
+# 20030126 ueberpruefung, ob IP-Checker auch wirklich eine IP-Adresse zurueckliefert
+#          Abspeichern der Offline-IP und der IP-Checker nur nach Erfolg
+#          User-Agent "selfhost-updater (<version>, Linux)" wird mitgeschickt
+#          Bei der Ausgabe der Syntax werden CONFIGDIR und NOSSL beruecksichtigt
+# 20030106 Neues Format der Konfiguration ueber Dateien in /etc/selfhost
+#          Moeglichkeit, mehrere Konfiguration ueber die Umgebungsvariable CONFIGDIR zu verwenden
+#          Anstelle von lynx wird jetzt auch tatsaechlich das voreingestellte Tool verwendet
+#          Aufruf des Update-CGIs per SSL, kann mit NOSSL=1 abgeschaltet werden
+# 20021118 Bei fehlgeschlagenem Update wird die IP nicht mehr in $STATEFILE gespeichert
+#            (Danke an Andreas Kessel <kessel AT formatsoft.de>)
+# 20020926 Ausgabe beim Setzen des Passworts korrigiert (Danke an Fabian Harder <fabianhdr AT foni.net>)
+# 20020822 Implementierung des Offline-Modus von selfhost
+# 20020813 Optionale Angabe einer IP-Adresse beim Update (Danke an Fabian Harder <fabianhdr AT foni.net>)
+#          Pruefung auf root-Rechte an den Anfang gesetzt, um ueberfluessige Fehlermeldungen zu vermeiden
+# 20020705 Es wird dns.pl statt update.pl zum Updaten verwendet
+# 20020704 Erstes Release
+
+LANG=C
+
+# Hier wird das Konfigurationsverzeichnis festgelegt
+if [ ! $CONFIGDIR ] ; then
+  CONFIGDIR=/etc/selfhost
+fi
+if [ ! -d $CONFIGDIR ] ; then
+  mkdir $CONFIGDIR
+fi
+
+# Die Konfigurationsdateien
+DEVICEFILE=$CONFIGDIR/device
+STATEFILE=$CONFIGDIR/ip
+USERFILE=$CONFIGDIR/user
+PASSFILE=$CONFIGDIR/pass
+URLFILE=$CONFIGDIR/url
+LOCKEDFILE=$CONFIGDIR/locked
+NOTIFYFILE=$CONFIGDIR/notify
+TOOLFILE=$CONFIGDIR/tool
+NOIPADDR=$CONFIGDIR/noipaddr
+
+# Diese Dateien sollten auf jeden Fall existieren
+touch $STATEFILE
+touch $URLFILE
+touch $TOOLFILE
+
+# Haben wir schon eine Liste von IP-Checkern? Wenn nein, dann Default
+URLS=`cat $URLFILE`
+if [ ! "$URLS" ] ; then
+  URLS="http://remote.ns4you.de/"
+fi
+
+# Hilfsroutine zum Auslesen der selfhost-Variablen
+getvar () {
+  SELFHOSTVAR=`grep "^$1=" $TMPFILE | awk -F = '{ print $2 }'`
+}
+
+AGENTSTRING="selfhost-updater-linux-$VERSION"
+
+# Mit welchem Tool machen wir unsere Updates?
+WISHTOOL=`cat $TOOLFILE`
+
+if [ "$WISHTOOL" = "wget" ] || [[ "$TOOL" = "" && -x "`which wget 2>/dev/null`" ]] ; then
+  if [ "`wget --help | grep sslcheckcert`" ] ; then
+    AGENTSTRING="$AGENTSTRING-wget-sslcheckcert"
+    TOOL="wget --sslcheckcert=0 --timeout=5 -U $AGENTSTRING -q -O -"
+  elif [ "`wget --help | grep no-check-certificate`" ] ; then
+    AGENTSTRING="$AGENTSTRING-wget-no-check-certificate"
+    TOOL="wget --no-check-certificate --timeout=5 -U $AGENTSTRING -q -O -"
+  else
+    AGENTSTRING="$AGENTSTRING-wget-default"
+    TOOL="wget --timeout=5 -U $AGENTSTRING -q -O -"
+  fi
+fi
+if [ "$WISHTOOL" = "lynx" ] || [[ "$TOOL" = "" && -x "`which lynx 2>/dev/null`" ]] ; then
+  AGENTSTRING="$AGENTSTRING-lynx-default"
+  TOOL="lynx -useragent=$AGENTSTRING -source"
+fi
+if [ "$WISHTOOL" = "links" ] || [[ "$TOOL" = "" && -x "`which links 2>/dev/null`" ]] ; then
+  if [ "`links -help | grep user-agent`" ] ; then
+    AGENTSTRING="$AGENTSTRING-links-default"
+    TOOL="links -user-agent $AGENTSTRING -source"
+  else
+    TOOL="links -source"
+  fi
+fi
+if [ "$WISHTOOL" = "curl" ] || [[ "$TOOL" = "" && -x "`which curl 2>/dev/null`" ]] ; then
+  AGENTSTRING="$AGENTSTRING-curl-default"
+  TOOL="curl --max-time 5 --insecure --user-agent $AGENTSTRING"
+fi
+
+if [ "$TOOL" = "" ] ; then
+  echo "Weder \`\`wget'' noch \`\`lynx'' noch \`\`links'' noch \`\`curl'' wurden auf dem System gefunden. Dieses Script benoetigt jedoch eines dieser Tools, um das IP-Update durchfuehren zu koennen. Bitte nachinstallieren oder PATH anpassen." | fold -s
+  exit 1
+fi
+
+# Hilfetext ausgeben, wenn kein Befehl angegeben wurde
+if [ ! $1 ] ; then
+  echo "Syntax: [CONFIGDIR=dir] [NOSSL=1] $0 <befehl> [<parameter>]"
+  echo
+  echo "Gueltige Befehle:"
+  echo
+  echo "update [<ip>]      Account aktualisieren (ggf. unter Angabe der IP)"
+  echo "offline            Account auf Offline-IP schalten"
+  echo
+  echo "setdev <geraet>    Geraet definieren, das die Internet-Verbindung vermittelt"
+  echo "setusr <user>      selfhost-Username setzen"
+  echo "setpwd <passwort>  selfhost-Passwort setzen"
+  echo
+  echo "version            Versionsnummer ausgeben"
+  echo
+  echo "Durch Angabe von CONFIGDIR kann eine alternative Konfiguration angegeben werden."
+  echo "Der Standard fuer diese Angabe ist \"/etc/selfhost\"."
+  echo
+  echo "Durch Angabe von NOSSL=1 kann die SSL-Unterstuetzung abgeschaltet werden."
+  exit 0
+fi
+
+# Konfiguration: Geraet setzen
+if [ "$1" = "setdev" ] ; then
+  DEVICE=$2
+  if [ "$DEVICE" = "" ] ; then
+    echo "Geraetename fehlt"
+    exit 1
+  fi
+  if [ "$DEVICE" != "router" ] ; then
+    /sbin/ifconfig $DEVICE >/dev/null 2>&1
+    if [ "$?" = "0" ] ; then
+      SETDEV=1
+    else
+      echo "Sorry, das Geraet \`\`$DEVICE'' existiert nicht."
+      exit 1
+    fi
+  else
+    # Das Geraet ``router'' setzen wir einfach blind
+    SETDEV=1
+  fi
+  if [ "$SETDEV" = "1" ] ; then
+    echo $DEVICE > $DEVICEFILE
+    echo "\`\`$DEVICE'' wurde als zu ueberwachendes Geraet gespeichert."
+  fi
+  exit 0
+fi
+
+# Konfiguration: Usernamen setzen
+
+if [ "$1" = "setusr" ] ; then
+  SELFHOSTUSER=$2
+  if [ "$SELFHOSTUSER" = "" ] ; then
+    echo "Benutzername fehlt"
+    exit 1
+  fi
+  echo $SELFHOSTUSER > $USERFILE
+  echo "\`\`$SELFHOSTUSER'' wurde als Benutzername gespeichert."
+  exit 0
+fi
+
+# Konfiguration: Passwort setzen
+
+if [ "$1" = "setpwd" ] ; then
+  SELFHOSTPASS=$2
+  if [ "$SELFHOSTPASS" = "" ] ; then
+    echo "Passwort fehlt"
+    exit 1
+  fi
+  echo $SELFHOSTPASS > $PASSFILE
+  echo "\`\`$SELFHOSTPASS'' wurde als Passwort gespeichert."
+  exit 0
+fi
+
+# ------------------------------------------------------------------------------
+# Konfigurationsbefehle wurden jetzt abgearbeitet. Wenn wir jetzt etwas tun
+# wollen, muessen DEVICEFILE, USERFILE und PASSFILE existieren. Pruefen...
+# ------------------------------------------------------------------------------
+
+if [ ! -e $DEVICEFILE ] ; then
+  echo "Es wurde noch kein Geraet konfiguriert. Keine Sorge, dies ist schnell erledigt. Es muss lediglich eingestellt werden, welches Netzwerk-Interface die Verbindung zum Internet vermittelt. Dazu einfach dieses Script nochmals aufrufen und als Parameter \`\`setdev <geraet>'' angeben. Der Geraetename ist typischerweise \`\`ppp0'' fuer Modem- und ADSL-Verbindungen, \`\`ippp0'' fuer ISDN-Verbindungen und \`\`eth0'' fuer Ethernet-Verbindungen. Befindet sich dieser Rechner hinter einem Router, so kann die aktuelle IP-Adresse nicht lokal ermittelt werden - in diesem Fall als Geraetename bitte \`\`router'' eintragen." | fold -s
+  echo
+  echo "Beispiel: \`\`$0 setdev ppp0''"
+  exit 1
+fi
+
+if [ ! -e $USERFILE ] ; then
+  echo "Es wurde noch kein Username gesetzt. Dazu muss nur der Befehl ``setusr'' zusammen mit dem Usernamen aufgerufen werden." | fold -s
+  echo
+  echo "Beispiel: \`\`$0 setusr 123456''"
+  exit 1
+fi
+
+if [ ! -e $PASSFILE ] ; then
+  echo "Es wurde noch kein Passwort gesetzt. Dazu muss nur der Befehl ``setpwd'' zusammen mit dem Passwort aufgerufen werden." | fold -s
+  echo
+  echo "Beispiel: \`\`$0 setpwd geheim''"
+  exit 1
+fi
+
+# ------------------------------------------------------------------------------
+# Konfiguration liegt vor; jetzt gewuenschte Aktion aufrufen
+# ------------------------------------------------------------------------------
+
+if [ "$1" = "update" ] ; then
+  DOUPDATE=1
+  DEVICE=`cat $DEVICEFILE`
+fi
+
+if [ "$1" = "offline" ] ; then
+  DOUPDATE=1
+  DEVICE="offline"
+fi
+
+if [ "$DOUPDATE" = "1" ] ; then
+
+  if [ -e $LOCKEDFILE ] ; then
+
+    # Es existiert ein Lockfile... mal sehen, ob es schon zu alt ist
+    find $LOCKEDFILE -cmin 1440 -exec rm -f $LOCKEDFILE \;
+
+    # Wenn jetzt immer noch das Lockfile existiert, brechen wir mit der entsprechenden Meldung ab
+    if [ -e $LOCKEDFILE ] ; then
+      echo "Die Durchfuehrung von Updates ist derzeit nicht moeglich. Die Updatefunktion wurde gesperrt, da selfhost.de beim letzten Update folgenden Fehler zuruecklieferte:" | fold -s
+      cat $LOCKEDFILE
+      echo "Die Updatefunktion wurde aufgrund dieses Fehlers fuer 24 Stunden gesperrt, da die Behebung einen manuellen Eingriff erfordert. Wenn Sie das Problem beheben konnten, fuehren Sie bitte \`\`rm -f $LOCKEDFILE'' aus, um die Sperrung aufzuheben." | fold -s
+      exit 1
+    fi
+
+  fi
+
+  SELFHOSTUSER=`cat $USERFILE`
+  SELFHOSTPASS=`cat $PASSFILE`
+
+  if [ "$2" != "" ] ; then
+
+    echo -n "Manuelles Setzen der IP-Adresse... "
+    IPADDR=$2
+
+  else
+
+    if [ "$DEVICE" = "router" ] ; then
+
+      for URL in $URLS ; do
+        echo -n "* IP-Adresse ermitteln mit $URL... "
+        IPADDR=`$TOOL $URL 2>/dev/null`
+        if [ "$?" = "0" ] ; then
+          # Ist das, was rausgekommen ist, wirklich eine IP-Adresse?
+          echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|[0-9a-e:]{1,39})$'
+          if [ "$?" = "0" ] ; then
+            break
+          else
+            echo "fehlgeschlagen (Antwort war keine IP-Adresse)"
+            IPADDR="noiperr"
+          fi
+        else
+          echo "fehlgeschlagen (keine Antwort)"
+        fi
+      done
+
+      # Jetzt sind wir alle IP-Checker durchgegangen - haben wir eine IP?
+
+      if [ "$IPADDR" = "noiperr" ] ; then
+        echo "Saemtliche IP-Checker sind fehlgeschlagen - IP konnte nicht ermittelt werden"
+        if [ -e $NOTIFYFILE ] ; then
+          if [ ! -e $NOIPADDR ]; then
+            touch $NOIPADDR
+            echo "Die Ermittlung der IP-Adresse ist fehlgeschlagen. Die Antwort war keine IP-Adresse! Bitte ueberpruefen Sie manuell, ob sich eine IP unter einer der folgenden URLs ermitteln laesst:" >> $NOIPADDR
+            echo >> $NOIPADDR
+            echo $URLS >> $NOIPADDR
+            echo >> $NOIPADDR
+            echo "Diese Mail bekommen Sie nur einmal. Sobald ein IP-Update wieder moeglich ist, erhalten eine Mail zur Entwarnung." >> $NOIPADDR
+            cat $NOIPADDR | fold -s | mail -s "selfhost-updater: Keine IP-Ermittlung moeglich" `cat $NOTIFYFILE`
+          fi
+        fi
+        exit 1
+      fi
+
+      # Wenn wir bis hierher durchgekommen sind, lag zumindest kein noiperr-Fehler vor.
+      # Daher wird $NOIPADDR nunmehr wieder entfernt, falls vorhanden.
+
+      if [ -e $NOIPADDR ] ; then
+        if [ -e $NOTIFYFILE ] ; then
+          rm -f $NOIPADDR
+          echo "Die Ermittlung der IP-Adresse funktioniert nun wieder." | mail -s "selfhost-updater: IP-Ermittlung wieder moeglich" `cat $NOTIFYFILE`
+        fi
+      fi
+
+    elif [ "$DEVICE" = "offline" ] ; then
+      echo "Schalte auf IP-Adresse fuer Offline-Modus!"
+      IPADDR="offline"
+    else
+      echo -n "Suche IP-Adresse fuer $DEVICE... "
+      IPADDR=`/sbin/ifconfig $DEVICE | grep inet | awk '{ print $2 }' | awk -F : '{ print $2 }'`
+    fi
+  fi
+
+  if [ ! "$IPADDR" ] ; then
+    if [ -e $NOTIFYFILE ] ; then
+      echo | mail -s "selfhost-updater: Keine IP-Ermittlung moeglich" `cat $NOTIFYFILE`
+    fi
+    echo "Die IP-Adresse konnte nicht ermittelt werden, daher wird kein Update durchgefuehrt."
+    exit 1
+  fi
+
+
+  # ---------- Wurde etwas anderes als "offline" fuer die IP ermittelt, dies auf Korrektheit pruefen -----
+
+  if [ "$IPADDR" != "offline" ] ; then
+
+    echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|[0-9a-e:]{1,39})$'
+    if [ "$?" != "0" ] ; then
+      if [ -e $NOTIFYFILE ] ; then
+        echo $IPADDR | mail -s "selfhost-updater: IP-Ermittlung fehlerhaft" `cat $NOTIFYFILE`
+      fi
+      echo "Die Ermittlung der IP-Adresse ergab einen ungueltigen Wert, daher wird kein Update durchgefuehrt (IPADDR=$IPADDR)" | fold -s
+      exit 1
+    fi
+
+    # Ermittelte IP-Adresse wurde gefunden
+    echo $IPADDR
+
+  fi
+
+  OLDIPADDR=`cat $STATEFILE`
+
+  if [ "$IPADDR" = "$OLDIPADDR" ] ; then
+    echo "IP wird beibehalten, es wird kein Update durchgefuehrt"
+    exit 0
+  fi
+
+  echo "Wechsel der IP (war vorher: $OLDIPADDR)"
+
+  TMPFILE=`mktemp /tmp/selfhost.output.XXXXXX`
+  if [ "$NOSSL" != "" ] ; then
+    $TOOL "http://carol.selfhost.de/update?username=$SELFHOSTUSER&password=$SELFHOSTPASS&remote=1&hostlist=1&textmodi=1&myip=$IPADDR" > $TMPFILE 2>&1
+  else
+    $TOOL "https://carol.selfhost.de/update?username=$SELFHOSTUSER&password=$SELFHOSTPASS&remote=1&hostlist=1&textmodi=1&myip=$IPADDR" > $TMPFILE 2>&1
+  fi
+
+  if [ "$DEBUG" != "" ] ; then
+    echo ---------- VERSIONSNUMMER: $VERSION ----------
+    echo ---------- AUFRUF DES WEB-CLIENTS ----------
+    echo "$TOOL \"https://carol.selfhost.de/update?username=$SELFHOSTUSER&password=XXXXXXXX&remote=1&hostlist=1&myip=$IPADDR\" > $TMPFILE 2>&1"
+    echo ---------- AUSGABE DES WEB-CLIENTS ----------
+    cat $TMPFILE
+    echo ---------- ENDE DEBUG-OUTPUT ----------
+  fi
+
+  getvar status
+  # Der Status sagt uns alles, daher muessen wir wissen, ob es ihn gibt
+  if [ ! "$SELFHOSTVAR" ] ; then
+    echo "Das IP-Update konnte nicht durchgefuehrt werden; es trat ein temporaerer Fehler auf. Rufen Sie den selfhost-updater mit DEBUG=1 auf, um die Antwort des Webclients zu lesen. Moeglicherweise unterstuetzt er kein SSL; rufen Sie in diesem Fall den Updater mit NOSSL=1 auf." | fold -s
+    if [ -e $NOTIFYFILE ] ; then
+      cat $TMPFILE | mail -s "selfhost-updater: Temporaerer Fehler" `cat $NOTIFYFILE`
+    fi
+    rm -f $TMPFILE
+    exit 1
+  fi
+
+  # Haben wir eine Fehlerklasse 4xx (Clientfehler)?
+  echo $SELFHOSTVAR | grep -q "^4[[:digit:]]\{2\}$"
+  if [ "$?" = "0" ] ; then
+    ERRCODE=$SELFHOSTVAR
+    getvar text
+    if [ -e $NOTIFYFILE ] ; then
+      echo $SELFHOSTVAR | mail -s "selfhost-updater: Status $ERRCODE (24-Stunden-Sperrung)" `cat $NOTIFYFILE`
+    fi
+    echo "selfhost lieferte Status $ERRCODE zurueck ($SELFHOSTVAR). Die Updatefunktion wurde aufgrund dieses Fehlers fuer 24 Stunden gesperrt, da die Behebung einen manuellen Eingriff erfordert." | fold -s
+    # Durch das Anlegen von $LOCKEDFILE sperren wir uns selbst fuer 24 Stunden
+    echo $SELFHOSTVAR > $LOCKEDFILE
+    rm -f $TMPFILE
+    exit 1
+  fi
+
+  # Haben wir eine Fehlerklasse 5xx (Serverfehler)?
+  echo $SELFHOSTVAR | grep -q "^5[[:digit:]]\{2\}$"
+  if [ "$?" = "0" ] ; then
+    ERRCODE=$SELFHOSTVAR
+    getvar text
+    if [ -e $NOTIFYFILE ] ; then
+      echo $SELFHOSTVAR | mail -s "selfhost-updater: Status $ERRCODE" `cat $NOTIFYFILE`
+    fi
+    echo "selfhost lieferte Status $ERRCODE zurueck ($SELFHOSTVAR). Es wird in Kuerze ein neues Update versucht." | fold -s
+    rm -f $TMPFILE
+    exit 1
+  fi
+
+  # Wenn URL-Checker uebermittelt wurden, jetzt abspeichern
+  getvar remote
+  if [ "$SELFHOSTVAR" ] ; then
+    echo $SELFHOSTVAR > $URLFILE
+  fi
+
+  # Liste der aktualisierten Hostnamen auslesen
+  getvar hostlist
+
+  # Jetzt User benachrichtigen
+  if [ -e $NOTIFYFILE ] ; then
+    echo | mail -s "selfhost-updater: Update OK" `cat $NOTIFYFILE`
+  fi
+  echo "IP-Update wurde durchgefuehrt fuer: $SELFHOSTVAR"
+
+  # IP-Adresse nach erfolgreicher Uebermittlung merken
+  echo $IPADDR > $STATEFILE
+
+  rm -f $TMPFILE
+
+  exit 0
+
+fi
+
+if [ "$1" = "version" ] ; then
+  echo "selfhost-updater $VERSION"
+  exit 0
+fi
+
+echo "\`\`$1'': Befehl nicht bekannt"
+exit 1
