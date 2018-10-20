@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IP-Updater fuer selfhost.de
-VERSION=20140404
+VERSION=20181020
 
 # Autor: Jonas Pasche <mail AT jonaspasche.de>
 # Lizenz: GPL
