@@ -244,6 +244,22 @@
   in if-down.local, um den DNS-Eintrag offline zu schalten, wenn der Server
   heruntergefahren wird.
 
+* Auswahl ob IPv4 oder IPv6 Adresse aktualisiert werden soll
+  
+  In der Konfigurationsdatein ipversion kann eingestellt werden, ob die
+  IPv4 oder die IPv6 Adresse aktualisiert werden soll. 
+  Zwei Angaben in der Datei sind als einzelner Wert möglich: "IPv4" oder
+  "IPv6".
+  Die Einstellung konkurriert mit der Angabe "router" als Device. Die Angabe
+  "router" meint tatsächlich ausschließlich die Adresse des Routers, 
+  nicht etwa des Servers hinter einem Router. Es wird automatisch eine
+  IPv4 Adresse bei Selfhost aktualisiert, auch wenn die IP-Version auf
+  "IPv6" lautet. Dies müsste in der Programmierung erst abgefragt werden.
+  Stattdessen wird eine IPv6 Adresse an Selfhost gemeldet, wenn die Angabe
+  in der Datei "device" nicht "router" heißt.
+  Bei der Ermittlung der IP-Adresse wird darauf geachtet, dass keine ULA an
+  Selfhost gemeldet wird, sondern die globale IPv6.
+
 * Mehrere Accounts verwenden:
 
   Die Konfiguration wird standardmäßig in /etc/selfhost gespeichert. Dies
