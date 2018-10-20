@@ -7,6 +7,8 @@ VERSION=20140404
 # Lizenz: GPL
 #
 # Aenderungen:
+# 20181020 Pruefungen der IPv6 Adresse verbessert, so dass auch kompakte Formen erlaubt sind
+#          Script so angepasst, dass die Möglichkeit besteht, entweder eine IPv4 oder eine IPv6 Adresse zu aktualisieren
 # 20140404 Pruefungen der IP-Adresse lassen nun auch IPv6-IPs zu, seit die selfHOST-API jene erlaubt
 # 20070313 Offline-IP wird nun nicht mehr lokal ermittelt
 # 20060206 Versionsnummer in Debug-Ausgabe eingefuegt
@@ -356,7 +358,6 @@ if [ "$DOUPDATE" = "1" ] ; then
       IPADDR="offline"
     else
       echo -n "Suche IP-Adresse fuer $DEVICE... "
-      # TODO Die ermittlung der IP-Adresse so umstellen, dass das Script das Ermitteln einer v6-Adresse zulässt. Im Idealfall erfolgt dies anhand eines Parameters
       if [ "$IPVERSION" = "IPv6" ] ; then
         IPADDR=`ip addr show eth0 | grep -E "scope global.*dynamic" | grep -v fd | grep -oE '((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))'`
       elif [ "$IPVERSION" = "IPv4" ] ; then
