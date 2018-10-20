@@ -307,7 +307,11 @@ if [ "$DOUPDATE" = "1" ] ; then
         IPADDR=`$TOOL $URL 2>/dev/null`
         if [ "$?" = "0" ] ; then
           # Ist das, was rausgekommen ist, wirklich eine IP-Adresse?
-          echo $IPADDR | ip addr show eth0 | grep -e "scope global.*dynamic" | grep -Po 'inet6 \K[0-9a-fA-F:]+' | grep -v fd
+          if [ "$IPVERSION" = "IPv4" ] ; then
+            echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|[0-9a-e:]{1,39})$'
+          elif [ "$IPVERSION" = "IPv6" ] ; then
+            echo $IPADDR | grep -q -E '^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))$'
+          fi
           if [ "$?" = "0" ] ; then
             break
           else
@@ -354,7 +358,7 @@ if [ "$DOUPDATE" = "1" ] ; then
       echo -n "Suche IP-Adresse fuer $DEVICE... "
       # TODO Die ermittlung der IP-Adresse so umstellen, dass das Script das Ermitteln einer v6-Adresse zulässt. Im Idealfall erfolgt dies anhand eines Parameters
       if [ "$IPVERSION" = "IPv6" ] ; then
-        IPADDR=`ip addr show $DEVICE | grep -e "scope global.*dynamic" | grep -Po 'inet6 \K[0-9a-fA-F:]+' | grep -v fd`
+        IPADDR=`ip addr show eth0 | grep -E "scope global.*dynamic" | grep -v fd | grep -oE '((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))'`
       elif [ "$IPVERSION" = "IPv4" ] ; then
         IPADDR=`/sbin/ifconfig $DEVICE | grep inet | awk '{ print $2 }' | awk -F : '{ print $2 }'`
       fi
@@ -373,8 +377,13 @@ if [ "$DOUPDATE" = "1" ] ; then
   # ---------- Wurde etwas anderes als "offline" fuer die IP ermittelt, dies auf Korrektheit pruefen -----
 
   if [ "$IPADDR" != "offline" ] ; then
-
-    echo $IPADDR | grep -e "^[0-9a-fA-F:]"
+    if [ "$IPVERSION" = "IPv6" ] ; then
+      echo $IPADDR | grep -qoE '^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))$'
+    elif [ "$IPVERSION" = "IPv4" ] ; then
+      echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+    else
+      echo "selfhost-updater: Die ermittelte IP ist weder eine IPv4 noch eine IPv6 Adresse."
+    fi
     if [ "$?" != "0" ] ; then
       if [ -e $NOTIFYFILE ] ; then
         echo $IPADDR | mail -s "selfhost-updater: IP-Ermittlung fehlerhaft" `cat $NOTIFYFILE`
