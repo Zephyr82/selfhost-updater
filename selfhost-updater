@@ -186,7 +186,11 @@ if [ "$1" = "setdev" ] ; then
     exit 1
   fi
   if [ "$DEVICE" != "router" ] ; then
-    /sbin/ifconfig $DEVICE >/dev/null 2>&1
+    if [ -e /sbin/ifconfig ]; then
+      /sbin/ifconfig $DEVICE >/dev/null 2>&1
+    elif [ -e /bin/ip ] ; then
+      /bin/ip addr show $DEVICE >/dev/null 2>&1
+    fi
     if [ "$?" = "0" ] ; then
       SETDEV=1
     else
