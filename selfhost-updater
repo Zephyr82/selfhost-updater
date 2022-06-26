@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # IP-Updater fuer selfhost.de
-VERSION=20181020
+VERSION=20220626
 
 # Autor: Jonas Pasche <mail AT jonaspasche.de>
 # Lizenz: GPL
 #
 # Aenderungen:
+# 20220626 Prüfung auf IPv4- bzw. IPv6-Adresse korrigiert, Klammer fehlte in Zeile 389
 # 20181020 Pruefungen der IPv6 Adresse verbessert, so dass auch kompakte Formen erlaubt sind
 #          Script so angepasst, dass die Möglichkeit besteht, entweder eine IPv4 oder eine IPv6 Adresse zu aktualisieren
 # 20140404 Pruefungen der IP-Adresse lassen nun auch IPv6-IPs zu, seit die selfHOST-API jene erlaubt
@@ -385,7 +386,7 @@ if [ "$DOUPDATE" = "1" ] ; then
     if [ "$IPVERSION" = "IPv6" ] ; then
       echo $IPADDR | grep -qoE '^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))$'
     elif [ "$IPVERSION" = "IPv4" ] ; then
-      echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+      echo $IPADDR | grep -q -E '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'
     else
       echo "selfhost-updater: Die ermittelte IP ist weder eine IPv4 noch eine IPv6 Adresse."
     fi
